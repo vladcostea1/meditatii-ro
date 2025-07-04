@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meditatii.ro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+
+  <div class="max-w-xl mx-auto mt-10 p-6 bg-white rounded shadow">
+    <h1 class="text-3xl font-bold text-center mb-4">Meditatii.ro</h1>
+    <p class="text-center text-gray-600">Platformă pentru studenți care oferă meditații la mate și info</p>
+  </div>
+
+  <!-- FORMULAR ÎNREGISTRARE -->
+  <div class="max-w-xl mx-auto mt-6 p-4 bg-white rounded shadow">
+    <h2 class="text-xl font-semibold mb-2">Înregistrare</h2>
+    <form id="registerForm" class="space-y-2">
+      <input type="text" name="nume" placeholder="Nume complet" required class="w-full p-2 border rounded">
+      <input type="email" name="email" placeholder="Email" required class="w-full p-2 border rounded">
+      <input type="password" name="parola" placeholder="Parolă" required class="w-full p-2 border rounded">
+      <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Înregistrează-te</button>
+    </form>
+  </div>
+
+  <!-- FORMULAR LOGIN -->
+  <div class="max-w-xl mx-auto mt-4 p-4 bg-white rounded shadow">
+    <h2 class="text-xl font-semibold mb-2">Login</h2>
+    <form id="loginForm" class="space-y-2">
+      <input type="email" name="email" placeholder="Email" required class="w-full p-2 border rounded">
+      <input type="password" name="parola" placeholder="Parolă" required class="w-full p-2 border rounded">
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Autentifică-te</button>
+    </form>
+  </div>
+
+  <!-- FORMULAR MEDITAȚIE -->
+  <div class="max-w-xl mx-auto mt-6 p-4 bg-white rounded shadow">
+    <h2 class="text-xl font-semibold mb-2">Adaugă o meditație</h2>
+    <form id="meditatieForm" class="space-y-2">
+      <input type="text" name="numeStudent" placeholder="Nume student" required class="w-full p-2 border rounded">
+      <input type="text" name="materie" placeholder="Materie" required class="w-full p-2 border rounded">
+      <input type="text" name="clasa" placeholder="Clasa" required class="w-full p-2 border rounded">
+      <input type="number" name="pret" placeholder="Preț (RON/oră)" required class="w-full p-2 border rounded">
+      <input type="text" name="locatie" placeholder="Locație (Online/Oraș)" required class="w-full p-2 border rounded">
+      <textarea name="descriere" placeholder="Descriere opțională" class="w-full p-2 border rounded"></textarea>
+      <button type="submit" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">Trimite</button>
+    </form>
+  </div>
+
+  <!-- LISTA MEDITAȚII -->
+  <div class="max-w-xl mx-auto mt-6 mb-10 space-y-4" id="meditatiiContainer"></div>
+
+  <!-- SCRIPT -->
+  <script>
+    function incarcaMeditatii() {
+      fetch('http://localhost:5000/api/meditatii')
+        .then(res => res.json())
+        .then(data => {
+          const container = document.getElementById('meditatiiContainer');
+          container.innerHTML = "";
+          data.forEach(med => {
+            const card = document.createElement('div');
+            card.className = "bg-white p-4 rounded shadow";
+            card.innerHTML = `
+              <h2 class="text-xl font-semibold">${med.numeStudent}</h2>
+              <p><strong>Materie:</strong> ${med.materie}</p>
+              <p><strong>Clasa:</strong> ${med.clasa}</p>
+              <p><strong>Preț:</strong> ${med.pret} RON / oră</p>
+              <p><strong>Locație:</strong> ${med.locatie}</p>
+              <p class="mt-2 text-sm text-gray-700">${med.descriere}</p>
+            `;
+            container.appendChild(card);
+          });
+        });
+    }
+
+    window.onload = incarcaMeditatii;
+
+    document.getElementById('meditatieForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData.entries());
+
+      const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('userId');
+      data.userId = userId;
+
+      const res = await fetch('http://localhost:5000/api/meditatii', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (res.ok) {
+        alert("Meditația a fost adăugată!");
+        e.target.reset();
+        incarcaMeditatii();
+      } else {
+        alert("Eroare la trimitere");
+      }
+    });
+
+    // Înregistrare
+    document.getElementById('registerForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target).entries());
+
+      const res = await fetch('http://localhost:5000/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const result = await res.json();
+      alert(result.msg || 'Înregistrare finalizată');
+      e.target.reset();
+    });
+
+    // Login
+    document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target).entries());
+
+      const res = await fetch('http://localhost:5000/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const result = await res.json();
+      if (res.ok) {
+        localStorage.setItem('token', result.token);
+        localStorage.setItem('userId', result.user.id);
+        alert(`Bun venit, ${result.user.nume}!`);
+      } else {
+        alert(result.msg || 'Autentificare eșuată');
+      }
+    });
+  </script>
+</body>
+</html>
